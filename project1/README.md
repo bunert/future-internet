@@ -130,4 +130,4 @@ Before the deadline, write a short explanation (up to 5 sentences) about how you
 project1/explain.txt
 ```
 
-**You can find the leader board [here](http://bach020.ethz.ch/cc_contest.html)**
+**You can find the leader board [here](http://bach20.ethz.ch/cc_contest.html)**

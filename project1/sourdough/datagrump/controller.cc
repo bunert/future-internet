@@ -14,7 +14,7 @@ Controller::Controller( const bool debug )
 unsigned int Controller::window_size()
 {
 
-  unsigned int the_window_size = 200;
+  unsigned int the_window_size = 100;
 
   if ( debug_ ) {
     cerr << "At time " << timestamp_ms()
