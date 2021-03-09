@@ -8,8 +8,8 @@
 class Controller {
 private:
     bool debug_; /* Enables debugging output */
-    double cwnd_;
-    double thresh_;
+    uint64_t cwnd_;
+    uint64_t thresh_;
 
     /* Add member variables here */
 
