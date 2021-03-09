@@ -12,7 +12,7 @@ Controller::Controller(const bool debug)
 /* Get current window size, in datagrams */
 unsigned int Controller::window_size() {
 
-    unsigned int window = cwnd_;
+    unsigned int window = 75;
 
     if (debug_) {
         cerr << "At time " << timestamp_ms()
