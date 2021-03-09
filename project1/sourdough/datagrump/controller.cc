@@ -6,15 +6,11 @@
 using namespace std;
 
 /* Default constructor */
-Controller::Controller(const bool debug) : debug_(debug), cwnd_(1), thresh_(1000000) {
+Controller::Controller(const bool debug) : debug_(debug), cwnd_(1.0), thresh_(1000000.0) {
 }
 
 /* Get current window size, in datagrams */
 unsigned int Controller::window_size() {
-
-    debug_ = false;
-
-    // unsigned int the_window_size = 75;
 
     if (debug_) {
         cerr << "At time " << timestamp_ms()
@@ -34,7 +30,7 @@ void Controller::datagram_was_sent(const uint64_t sequence_number,
     if (after_timeout) {
         thresh_ = cwnd_ / 2;
         cwnd_ = 1;
-        cerr << "timeout" << endl;
+        cerr << "timeout, cwnd: " << cwnd_ << " thresh: " << thresh_ << endl;
     }
 
     if (debug_) {
@@ -56,7 +52,7 @@ void Controller::ack_received(const uint64_t sequence_number_acked,
     if (cwnd_ < thresh_) {
         cwnd_++;
     } else {
-        cwnd_ = cwnd_ + 1 / cwnd_;
+        cwnd_ += 1.0 / cwnd_;
     }
 
     if (debug_) {
@@ -71,5 +67,5 @@ void Controller::ack_received(const uint64_t sequence_number_acked,
 /* How long to wait (in milliseconds) if there are no acks
    before sending one more datagram */
 unsigned int Controller::timeout_ms() {
-    return 1000; /* timeout of one second */
+    return 500; /* timeout of one second */
 }
