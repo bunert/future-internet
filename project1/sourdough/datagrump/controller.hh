@@ -9,8 +9,6 @@ class Controller
 {
 private:
   bool debug_; /* Enables debugging output */
-  uint64_t window_size_;
-  uint64_t last_ack_;
 
   /* Add member variables here */
 
