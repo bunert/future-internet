@@ -6,7 +6,7 @@
 using namespace std;
 
 /* Default constructor */
-Controller::Controller(const bool debug) : debug_(debug), cwnd_(1), thresh_(1000) {
+Controller::Controller(const bool debug) : debug_(debug), cwnd_(1), thresh_(1000000) {
 }
 
 /* Get current window size, in datagrams */
@@ -34,6 +34,7 @@ void Controller::datagram_was_sent(const uint64_t sequence_number,
     if (after_timeout) {
         thresh_ = cwnd_ / 2;
         cwnd_ = 1;
+        cerr << "timeout" << endl;
     }
 
     if (debug_) {
@@ -55,8 +56,7 @@ void Controller::ack_received(const uint64_t sequence_number_acked,
     if (cwnd_ < thresh_) {
         cwnd_++;
     } else {
-//        cwnd_ = cwnd_ + 1 / cwnd_;
-        cwnd_++;
+        cwnd_ = cwnd_ + 1 / cwnd_;
     }
 
     if (debug_) {
