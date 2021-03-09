@@ -67,5 +67,5 @@ void Controller::ack_received(const uint64_t sequence_number_acked,
 /* How long to wait (in milliseconds) if there are no acks
    before sending one more datagram */
 unsigned int Controller::timeout_ms() {
-    return 500; /* timeout of one second */
+    return 100; /* timeout of one second */
 }
