@@ -41,16 +41,19 @@ void Controller::datagram_was_sent(const uint64_t sequence_number,
 }
 
 /* An ack was received */
-void Controller::ack_received(const uint64_t sequence_number_acked,
-        /* what sequence number was acknowledged */
-                              const uint64_t send_timestamp_acked,
-        /* when the acknowledged datagram was sent (sender's clock) */
-                              const uint64_t recv_timestamp_acked,
-        /* when the acknowledged datagram was received (receiver's clock)*/
-                              const uint64_t timestamp_ack_received)
-/* when the ack was received (by sender) */
+void Controller::ack_received(
+        const uint64_t sequence_number_acked, /* what sequence number was acknowledged */
+        const uint64_t send_timestamp_acked, /* when the acknowledged datagram was sent (sender's clock) */
+        const uint64_t recv_timestamp_acked, /* when the acknowledged datagram was received (receiver's clock)*/
+        const uint64_t timestamp_ack_received)/* when the ack was received (by sender) */
 {
-    if (cwnd_ < thresh_ && timestamp_ack_received - send_timestamp_acked < 10) {
+    uint64_t diff = timestamp_ack_received - send_timestamp_acked;
+    if (diff > timeout_ms()) {
+        thresh_ = cwnd_ / 2;
+        cwnd_ = 1;
+    }
+
+    if (cwnd_ < thresh_) {
         cwnd_++;
     } else {
         cwnd_ += 1.0 / cwnd_;
@@ -68,5 +71,5 @@ void Controller::ack_received(const uint64_t sequence_number_acked,
 /* How long to wait (in milliseconds) if there are no acks
    before sending one more datagram */
 unsigned int Controller::timeout_ms() {
-    return 1000; /* timeout of one second */
+    return 100; /* timeout of one second */
 }
