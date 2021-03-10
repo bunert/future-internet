@@ -53,7 +53,7 @@ void Controller::ack_received(
     if (cwnd_ < thresh_) {
         cwnd_++;
     } else {
-        cwnd_ += 1.0 / cwnd_;
+        cwnd_ += 1.5 / cwnd_;
     }
 
     if (debug_) {
