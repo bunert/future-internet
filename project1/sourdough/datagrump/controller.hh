@@ -2,6 +2,7 @@
 #define CONTROLLER_HH
 
 #include <cstdint>
+#include <limits>
 
 /* Congestion controller interface */
 
@@ -9,10 +10,10 @@ class Controller
 {
 private:
   bool debug_; /* Enables debugging output */
-  double cwnd_;
-  double thresh_;
+  double cwnd_ = 1;
+  double thresh_ = std::numeric_limits<double>::infinity();
 
-  /* Add member variables here */
+  void timed_out();
 
 public:
   /* Public interface for the congestion controller */

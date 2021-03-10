@@ -7,7 +7,7 @@ using namespace std;
 
 /* Default constructor */
 Controller::Controller(const bool debug)
-        : debug_(debug), cwnd_(1.0), thresh_(10000.0) {}
+        : debug_(debug) {}
 
 /* Get current window size, in datagrams */
 unsigned int Controller::window_size() {
@@ -19,22 +19,20 @@ unsigned int Controller::window_size() {
              << " window size is " << window << endl;
     }
 
-//    cerr << window << endl;
-
     return window;
 }
 
+void Controller::timed_out() {
+    thresh_ = cwnd_ / 2;
+    cwnd_ = 1;
+}
+
 /* A datagram was sent */
-void Controller::datagram_was_sent(const uint64_t sequence_number,
-        /* of the sent datagram */
-                                   const uint64_t send_timestamp,
-        /* in milliseconds */
-                                   const bool after_timeout
-        /* datagram was sent because of a timeout */ ) {
-    if (after_timeout) {
-        thresh_ = cwnd_ / 2;
-        cwnd_ = 1;
-    }
+void Controller::datagram_was_sent(
+        const uint64_t sequence_number, /* of the sent datagram */
+        const uint64_t send_timestamp,  /* in milliseconds */
+        const bool after_timeout        /* datagram was sent because of a timeout */ ) {
+    if (after_timeout) timed_out();
 
     if (debug_) {
         cerr << "At time " << send_timestamp
@@ -44,16 +42,13 @@ void Controller::datagram_was_sent(const uint64_t sequence_number,
 
 /* An ack was received */
 void Controller::ack_received(
-        const uint64_t sequence_number_acked, /* what sequence number was acknowledged */
-        const uint64_t send_timestamp_acked, /* when the acknowledged datagram was sent (sender's clock) */
-        const uint64_t recv_timestamp_acked, /* when the acknowledged datagram was received (receiver's clock)*/
-        const uint64_t timestamp_ack_received)/* when the ack was received (by sender) */
+        const uint64_t sequence_number_acked,  /* what sequence number was acknowledged */
+        const uint64_t send_timestamp_acked,   /* when the acknowledged datagram was sent (sender's clock) */
+        const uint64_t recv_timestamp_acked,   /* when the acknowledged datagram was received (receiver's clock)*/
+        const uint64_t timestamp_ack_received) /* when the ack was received (by sender) */
 {
     uint64_t diff = timestamp_ack_received - send_timestamp_acked;
-    if (diff > timeout_ms()) {
-        thresh_ = cwnd_ / 2;
-        cwnd_ = 1;
-    }
+    if (diff > timeout_ms()) timed_out();
 
     if (cwnd_ < thresh_) {
         cwnd_++;
@@ -73,5 +68,5 @@ void Controller::ack_received(
 /* How long to wait (in milliseconds) if there are no acks
    before sending one more datagram */
 unsigned int Controller::timeout_ms() {
-    return 75; /* timeout of one second */
+    return 100;
 }
