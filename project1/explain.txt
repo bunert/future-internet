@@ -1,0 +1,3 @@
+For this exercise I implemented more or less standard AIMD as described in Ankit's lecture "Computer Networks". The algorithm works as follow:
+In the initial (oddly named) slow start phase, the window size is increased by 1 for every ACK that is received, i.e. it grows exponentially. Once the window size reaches a threshold (initially set to infinity), the congestion avoidance phase is entered where the window size increases only by 1/(window size) for every received ACK, i.e. linearly.
+Once congestion is detected (in this implementation simply upon a timeout), the threshold is set to the current window size and subsequently, the window size is halved.
