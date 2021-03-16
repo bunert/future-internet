@@ -46,7 +46,7 @@ kill 'INT', $receiver_pid;
 print "\n";
 
 # analyze performance locally
-system qq{mm-throughput-graph 500 ${output_location} > /tmp/hhlog}
+system qq{mm-throughput-graph 500 ${output_location} > /home/vagrant/project/hhlog.html}
   and die q{mm-throughput-graph exited with error. NOT uploading};
 
 print "\n";

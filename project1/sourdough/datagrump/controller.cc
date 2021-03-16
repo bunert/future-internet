@@ -23,7 +23,7 @@ unsigned int Controller::window_size() {
 }
 
 void Controller::timed_out() {
-    thresh_ = cwnd_ / 2;
+    thresh_ = cwnd_ / 2.0;
     cwnd_ = 1;
 }
 
