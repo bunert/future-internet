@@ -68,5 +68,5 @@ void Controller::ack_received(
 /* How long to wait (in milliseconds) if there are no acks
    before sending one more datagram */
 unsigned int Controller::timeout_ms() {
-    return 100;
+    return 125;
 }
