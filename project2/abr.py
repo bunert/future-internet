@@ -1,24 +1,33 @@
 from enum import Enum
+from collections import deque
 
 
-class CALLBACK_EVENT( Enum ):
+class CALLBACK_EVENT(Enum):
     INIT = 0
     DOWNLOAD_COMPLETED = 1
-    TIMEOUT  = 2
+    TIMEOUT = 2
     REBUFFERING = 3
 
 
+current = None
+last_chunk = None
+last_quality = None
+last_download = None
+
+last_change = 0
+
+bandwidth = deque(maxlen=10)
 
 
 def abr(
-    typ,
-    current_time,
-    playback_time,
-    playback_chunk,
-    current_chunk,
-    current_chunk_quality,
-    current_chunk_download,
-    video
+        typ,
+        current_time,
+        playback_time,
+        playback_chunk,
+        current_chunk,
+        current_chunk_quality,
+        current_chunk_download,
+        video
 ):
     """
         typ - type of event
@@ -52,22 +61,71 @@ def abr(
                         - timeout is in absolute time, usually set it as current_time+X (where min X is 200ms)
                         - timeout 0 means no timeout
     """
-    
-    #initial
+
+    global last_chunk, last_quality, last_download, bandwidth, last_change
+
+    # Initialization
     if typ == CALLBACK_EVENT.INIT:
-        return 0, 0, 0.0
+        last_chunk = 0
+        last_quality = 0
+        last_download = 0
 
-    #rebuffering or timeout, ignore 
-    if typ == CALLBACK_EVENT.TIMEOUT or typ == CALLBACK_EVENT.REBUFFERING:
-        return current_chunk_quality, current_chunk, 0
-    
+        return dispatch(0, 0, current_time + 0.2)
 
-    next_chunk = current_chunk + 1
-    
-    #if we arrived to the end of the stream or it is not the initial call and the download has finished
-    
-    
-    if next_chunk == len(video[0]):
-        next_chunk = -1
-    
-    return 0, next_chunk, 0.0
+    # Chunk downloaded
+    if typ == CALLBACK_EVENT.DOWNLOAD_COMPLETED:
+        next_chunk = current_chunk + 1
+
+        if next_chunk == len(video[0]):
+            return dispatch(-1, 0)
+
+        if buffer_size(current_chunk, playback_chunk) > 10 and last_change > 4:
+            next_chunk_quality = min(current_chunk_quality + 1, 5)
+        elif buffer_size(current_chunk, playback_chunk) < 3:
+            next_chunk_quality = max(current_chunk_quality - 1, 0)
+        else:
+            next_chunk_quality = current_chunk_quality
+
+        last_change += 1
+        if (next_chunk_quality != current_chunk_quality):
+            last_change = 0
+
+        return dispatch(next_chunk, next_chunk_quality)
+
+    # Trigger
+    if typ == CALLBACK_EVENT.TIMEOUT:
+
+        if (last_chunk == current_chunk):
+            current_bandwidth = current_chunk_download - last_download
+        else:
+            current_bandwidth = BITRATES[last_quality] * 4 - last_download
+
+        bandwidth.append(current_bandwidth)
+
+        last_chunk = current_chunk
+        last_quality = current_chunk_quality
+        last_download = current_chunk_download
+
+        return dispatch(current_chunk, current_chunk_quality, current_time + 200)
+
+    # Rebuffering, fall back to the lowest quality
+    if typ == CALLBACK_EVENT.REBUFFERING:
+        return dispatch(current_chunk, 0)
+
+
+def dispatch(chunk, quality, next=0):
+    global current
+
+    current = (chunk, quality)
+
+    return quality, chunk, next
+
+
+def buffer_size(current_chunk, playback_chunk):
+    return current_chunk - playback_chunk
+
+
+def get_bandwidth():
+    global bandwidth
+
+    return sum(bandwidth) / 2
