@@ -1,6 +1,8 @@
 from bba import BBA
+from default import Default
 
-bba = BBA()
+manager = BBA()
+# manager = Default()
 
 def abr(
         typ,
@@ -45,7 +47,7 @@ def abr(
                         - timeout 0 means no timeout
     """
 
-    return bba.abr(
+    return manager.abr(
         typ,
         current_time,
         playback_time,
