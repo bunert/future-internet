@@ -1,6 +1,8 @@
 from enum import Enum
 from collections import deque
 
+BITRATES = [300, 750, 1200, 1850, 2850, 4300]  # Kbps
+
 
 class CALLBACK_EVENT(Enum):
     INIT = 0
@@ -87,7 +89,7 @@ def abr(
             next_chunk_quality = current_chunk_quality
 
         last_change += 1
-        if (next_chunk_quality != current_chunk_quality):
+        if next_chunk_quality != current_chunk_quality:
             last_change = 0
 
         return dispatch(next_chunk, next_chunk_quality)
@@ -95,7 +97,7 @@ def abr(
     # Trigger
     if typ == CALLBACK_EVENT.TIMEOUT:
 
-        if (last_chunk == current_chunk):
+        if last_chunk == current_chunk:
             current_bandwidth = current_chunk_download - last_download
         else:
             current_bandwidth = BITRATES[last_quality] * 4 - last_download
