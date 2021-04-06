@@ -8,7 +8,8 @@ class CALLBACK_EVENT( Enum ):
     REBUFFERING = 3
 
 
-last_change = 0
+last_chunk = 0
+byte_downloaded = 0
 
 def abr(
         typ,
@@ -52,39 +53,49 @@ def abr(
                         - timeout is in absolute time, usually set it as current_time+X (where min X is 200ms)
                         - timeout 0 means no timeout
     """
-    global last_change
+    global last_chunk, byte_downloaded
     
     #initial
     if typ == CALLBACK_EVENT.INIT:
-        return 0, 0, 0.0
+        last_chunk = 0
+        return 0, 0, current_time + 0.2
+
+    # print("current chunk downloaded: ", current_chunk_download)
+    # print("total size: ", video[current_chunk_quality][current_chunk])
 
     #rebuffering or timeout, ignore 
     if typ == CALLBACK_EVENT.DOWNLOAD_COMPLETED:
-        # print("quality: ", current_chunk_quality)
+        # print("complete, quality: ", current_chunk_quality)
         next_chunk = current_chunk + 1
+        byte_downloaded = 0
+        last_chunk = next_chunk
 
         if next_chunk == len(video[0]):
             return 0, -1, 0.0
         
-        if current_chunk - playback_chunk > 2 and last_change > 2:
+        # increase
+        if current_chunk - playback_chunk > 3:
             next_chunk_quality = min(current_chunk_quality + 1, 5)
-        elif current_chunk - playback_chunk < 2:
+        # decrease
+        elif current_chunk - playback_chunk < 3:
             next_chunk_quality = max(current_chunk_quality - 1, 0)
         else:
             next_chunk_quality = current_chunk_quality
 
-        # print("buffer size: ", self.buffer_size(current_chunk, playback_chunk))
-        last_change += 1
-        if next_chunk_quality != current_chunk_quality:
-            last_change = 0
-
-        return next_chunk_quality, next_chunk, 0.0 #(current_time + 0.2)
+        return next_chunk_quality, next_chunk, current_time + 0.2
 
     # Rebuffering, fall back to the lowest quality
     if typ == CALLBACK_EVENT.REBUFFERING:
-        return current_chunk_quality, current_chunk, 0
+        return 0, current_chunk, current_time + 0.2
 
     # Trigger
     if typ == CALLBACK_EVENT.TIMEOUT:
-        return current_chunk_quality, current_chunk, 0
+        current_bandwidth = current_chunk_download - byte_downloaded
+        # print("bw (last 200ms): ", current_bandwidth)
+
+
+        byte_downloaded = current_chunk_download
+
+
+        return current_chunk_quality, current_chunk, current_time + 0.2
 
