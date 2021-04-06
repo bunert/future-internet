@@ -1,5 +1,4 @@
-from abr import abr
-from callback import CALLBACK_EVENT
+from abr import abr, CALLBACK_EVENT
 import logging
 
 SEGMENT_LENGTH = 4.

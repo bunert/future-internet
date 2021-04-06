@@ -73,7 +73,6 @@ class BBA2:
 
         # Rebuffering, fall back to the lowest quality
         if typ == CALLBACK_EVENT.REBUFFERING:
-            # print("rebuffering")
             return self.dispatch(current_chunk, 0, current_time + 0.2)
 
     def dispatch(self, chunk, quality, next=0):

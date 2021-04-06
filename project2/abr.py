@@ -1,9 +1,14 @@
-# from bba import BBA
-from bba2 import BBA2
-from default import Default
+from enum import Enum
 
-manager = BBA2()
-# manager = Default()
+
+class CALLBACK_EVENT( Enum ):
+    INIT = 0
+    DOWNLOAD_COMPLETED = 1
+    TIMEOUT  = 2
+    REBUFFERING = 3
+
+
+last_change = 0
 
 def abr(
         typ,
@@ -47,14 +52,39 @@ def abr(
                         - timeout is in absolute time, usually set it as current_time+X (where min X is 200ms)
                         - timeout 0 means no timeout
     """
+    global last_change
+    
+    #initial
+    if typ == CALLBACK_EVENT.INIT:
+        return 0, 0, 0.0
 
-    return manager.abr(
-        typ,
-        current_time,
-        playback_time,
-        playback_chunk,
-        current_chunk,
-        current_chunk_quality,
-        current_chunk_download,
-        video,
-    )
+    #rebuffering or timeout, ignore 
+    if typ == CALLBACK_EVENT.DOWNLOAD_COMPLETED:
+        # print("quality: ", current_chunk_quality)
+        next_chunk = current_chunk + 1
+
+        if next_chunk == len(video[0]):
+            return 0, -1, 0.0
+        
+        if current_chunk - playback_chunk > 2 and last_change > 2:
+            next_chunk_quality = min(current_chunk_quality + 1, 5)
+        elif current_chunk - playback_chunk < 2:
+            next_chunk_quality = max(current_chunk_quality - 1, 0)
+        else:
+            next_chunk_quality = current_chunk_quality
+
+        # print("buffer size: ", self.buffer_size(current_chunk, playback_chunk))
+        last_change += 1
+        if next_chunk_quality != current_chunk_quality:
+            last_change = 0
+
+        return next_chunk_quality, next_chunk, 0.0 #(current_time + 0.2)
+
+    # Rebuffering, fall back to the lowest quality
+    if typ == CALLBACK_EVENT.REBUFFERING:
+        return current_chunk_quality, current_chunk, 0
+
+    # Trigger
+    if typ == CALLBACK_EVENT.TIMEOUT:
+        return current_chunk_quality, current_chunk, 0
+
