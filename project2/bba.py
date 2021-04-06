@@ -1,4 +1,3 @@
-from collections import deque
 from callback import CALLBACK_EVENT
 
 
@@ -10,7 +9,7 @@ class BBA:
     last_quality = None
     last_download = None
     last_change = 0
-    bandwidth = deque(maxlen=10)
+    bandwidth = []
 
     def abr(
             self,
