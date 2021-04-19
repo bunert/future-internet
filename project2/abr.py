@@ -78,10 +78,10 @@ def abr(
 
         buf = current_chunk - playback_chunk
         # decrease
-        if buf < 3:
+        if buf < 2:
             next_chunk_quality = min(max(current_chunk_quality - 1, 0), next_bitrate)
         # increase
-        elif buf >= 5:
+        elif buf >= 4:
             next_chunk_quality = max(min(current_chunk_quality + 1, 5), next_bitrate)
         else:
             next_chunk_quality = max(current_chunk_quality, next_bitrate)
