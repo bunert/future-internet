@@ -68,7 +68,7 @@ def dict_to_list(mapping: dict) -> list:
 def snake():
     results = [(x, x + 1) for x in range(1599)]
 
-    write_mapping(results)
+    return results
 
 
 def full_grid():
@@ -96,12 +96,14 @@ def full_grid():
             if orbit_idx + 1 in orbits and satellite_orbit_id in orbits[orbit_idx + 1]:
                 mapping[(satellite_id, orbits[orbit_idx + 1][satellite_orbit_id])] = True
 
-    write_mapping(dict_to_list(mapping))
+    return dict_to_list(mapping)
 
 
 if __name__ == '__main__':
-    snake()
-    # full_grid()
+    result = snake()
+    # result = full_grid()
+
+    write_mapping(result)
 
     exec(open("check_score.py").read())  # who needs modules anyway
     exec(open("visualize.py").read())  # who needs modules anyway

@@ -94,7 +94,7 @@ city_pos_file = "../input_data/cities.txt"
 city_coverage_file = "../input_data/city_coverage.txt"
 city_pair_file = "../input_data/city_pairs.txt"
 valid_isls_file = "../input_data/valid_isls.txt"
-sat_links_file = "../output_data/sat_links_hand.txt"
+sat_links_file = "../output_data/sat_links.txt"
 
 top_file = "static_html/top.html"
 bottom_file = "static_html/bottom.html"
