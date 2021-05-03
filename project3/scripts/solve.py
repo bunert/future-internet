@@ -88,9 +88,15 @@ def full_grid():
 
         for satellite_orbit_id, satellite_id in orbit.items():
 
+            next_satellite_id = satellite_id + 1
+
+            # case for last satellite in orbit
+            if satellite_orbit_id == max(orbit.keys()):
+                next_satellite_id = orbit[0]
+
             # connect within orbit
-            if satellite_orbit_id + 1 in orbit and (satellite_id, satellite_id + 1) in valid_isls:
-                mapping[(satellite_id, satellite_id + 1)] = True
+            if next_satellite_id in orbit.values() and (satellite_id, next_satellite_id) in valid_isls:
+                mapping[(satellite_id, next_satellite_id)] = True
 
             # connect to next orbit
             if orbit_idx + 1 in orbits and satellite_orbit_id in orbits[orbit_idx + 1]:
