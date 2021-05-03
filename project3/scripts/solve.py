@@ -152,10 +152,13 @@ def djikstra():
 
             cur_hop = path[0]
             for next_hop in path[1:]:
-                if is_satellite(cur_hop) and is_satellite(next_hop):
-                    connections[(cur_hop, next_hop)] = True
-                    sat_conn_count[cur_hop] += 1
-                    sat_conn_count[next_hop] += 1
+                from_hop = min(cur_hop, next_hop)
+                to_hop = min(cur_hop, next_hop)
+
+                if is_satellite(from_hop) and is_satellite(to_hop) and (from_hop, to_hop) not in connections:
+                    connections[(from_hop, to_hop)] = True
+                    sat_conn_count[from_hop] += 1
+                    sat_conn_count[to_hop] += 1
 
                 cur_hop = next_hop
 
@@ -168,7 +171,7 @@ if __name__ == '__main__':
     # result = snake()
     # result = full_grid()
     result = djikstra()
-    
+
     write_mapping(result)
 
     exec(open("check_score.py").read())  # who needs modules anyway
