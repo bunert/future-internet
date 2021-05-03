@@ -91,7 +91,7 @@ def compute_metric():
     avg_w_hopcount = w_hopcount_sum / w_sum
     w_metric = avg_w_stretch + avg_w_hopcount
     w_metric = round(w_metric, 2)
-    print("Your score:", w_metric)
+    print(f"Stretch: {round(avg_w_stretch, 2)} Hop-count: {round(avg_w_hopcount, 2)} Score: {w_metric}")
 
 
 sat_pos_file = "../input_data/sat_positions.txt"

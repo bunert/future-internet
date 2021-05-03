@@ -109,9 +109,9 @@ def grid2():
 
 
 if __name__ == '__main__':
-    # stupid()
+    stupid()
     # grid()
 
-    grid2()
+    # grid2()
 
     exec(open("check_score.py").read())  # who needs modules anyway
