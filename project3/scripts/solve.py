@@ -50,68 +50,58 @@ def read_coverage() -> pd.DataFrame:
     )
 
 
-def stupid():
-    results = [[x, x + 1] for x in range(1599)]
-    results = pd.DataFrame(results)
+# Stores a mapping as output file
+# Expected format: [(from, to)]
+# e.g. [(0, 1). (0, 2)]
+def write_mapping(mapping: list):
+    pd.DataFrame(mapping).to_csv('../output_data/sat_links.txt', index=False, header=False)
 
-    results.to_csv('../output_data/sat_links.txt', index=False, header=False)
+
+# Converts a dict of mappings to a list that can be used in write_mapping
+# Entries with false will be ignored
+# Expected format: {(from, to): Boolean}
+# e.g. {(0, 1): True, (0, 2): False} -> [(0, 1)]
+def dict_to_list(mapping: dict) -> list:
+    return list(map(lambda x: x[0], filter(lambda x: x[1], mapping.items())))
 
 
-def grid():
+def snake():
+    results = [(x, x + 1) for x in range(1599)]
+
+    write_mapping(results)
+
+
+def full_grid():
     satellites = read_satellites()
-
-    next_adjacent = satellites.copy()
-    next_adjacent['orbit_id'] = next_adjacent['orbit_id'].map(lambda x: x - 1)
-    joined_adjacent = satellites.merge(next_adjacent, on=['satellite_orbit_id', 'orbit_id'])
-
-    next_orbit = satellites.copy()
-    next_orbit['satellite_orbit_id'] = next_orbit['satellite_orbit_id'].map(lambda x: x - 1)
-    joined_orbit = satellites.merge(next_orbit, on=['satellite_orbit_id', 'orbit_id'])
-
-    joined = joined_orbit.append(joined_adjacent)
-
-    joined[['satellite_id_x', 'satellite_id_y']] \
-        .to_csv('../output_data/sat_links.txt', index=False, header=False)
-
-
-def grid2():
-    satellites = read_satellites()
-    n = satellites['satellite_id'].size
-
-    # Mapping orbits[orbit_id][satellite_orbit_id] = satellite_id
-    orbits = {}
-
-    # for idx, row in satellites.iterrows():
-    #     if row['orbit_id'] not in orbits:
-    #         orbits[row['orbit_id']] = {}
-    #
-    #     orbits[row['orbit_id']][row['satellite_orbit_id']] = row['satellite_id']
-
     valid_isls = read_isls()
 
-    connections = [0 for _ in range(n)]
+    # Mapping orbit_id -> satellite_orbit_id -> satellite_id
+    orbits = {}
+    for idx, row in satellites.iterrows():
+        if row['orbit_id'] not in orbits:
+            orbits[row['orbit_id']] = {}
+
+        orbits[row['orbit_id']][row['satellite_orbit_id']] = row['satellite_id']
+
     mapping = {}
+    for orbit_idx, orbit in orbits.items():
 
-    for i, _ in enumerate(connections):
-        if connections[i] == 4:
-            continue
+        for satellite_orbit_id, satellite_id in orbit.items():
 
-        counts = 0
-        j = randrange(n)
-        while j == i or j < i or connections[j] == 4 or (i, j) not in valid_isls:
-            j = randrange(n)
-            counts += 1
+            # connect within orbit
+            if satellite_orbit_id + 1 in orbit and (satellite_id, satellite_id + 1) in valid_isls:
+                mapping[(satellite_id, satellite_id + 1)] = True
 
+            # connect to next orbit
+            if orbit_idx + 1 in orbits and satellite_orbit_id in orbits[orbit_idx + 1]:
+                mapping[(satellite_id, orbits[orbit_idx + 1][satellite_orbit_id])] = True
 
-        mapping[(i, j)] = True
-        connections[i] += 1
-        connections[j] += 1
+    write_mapping(dict_to_list(mapping))
 
 
 if __name__ == '__main__':
-    stupid()
-    # grid()
-
-    # grid2()
+    snake()
+    # full_grid()
 
     exec(open("check_score.py").read())  # who needs modules anyway
+    exec(open("visualize.py").read())  # who needs modules anyway
