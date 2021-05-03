@@ -117,7 +117,7 @@ def is_satellite(hop_id: int) -> bool:
     return hop_id < 1600
 
 
-def build_graph(city_positions, city_coverage, sat_positions, valid_isls, sat_conn_count):
+def build_graph(city_positions, city_coverage, sat_positions, valid_isls, sat_conn_count, connections):
     g = nx.Graph()
 
     for city in city_positions:
@@ -127,9 +127,11 @@ def build_graph(city_positions, city_coverage, sat_positions, valid_isls, sat_co
 
     for sat in sat_positions:
         g.add_node(sat)
-    for key, value in valid_isls.items():
-        if sat_conn_count[key[0]] < 4 and sat_conn_count[key[1]] < 4:
-            g.add_edge(key[0], key[1], length=value)
+    for key, distance in valid_isls.items():
+        from_hop = min(key[0], key[1])
+        to_hop = max(key[0], key[1])
+        if (from_hop, to_hop) in connections or (sat_conn_count[from_hop] < 4 and sat_conn_count[to_hop] < 4):
+            g.add_edge(from_hop, to_hop, length=distance)
 
     return g
 
@@ -146,7 +148,7 @@ def djikstra():
 
     for i in range(10001, 10100):
         for j in range(i + 1, 10101):
-            g = build_graph(city_positions, city_coverage, sat_positions, valid_isls, sat_conn_count)
+            g = build_graph(city_positions, city_coverage, sat_positions, valid_isls, sat_conn_count, connections)
 
             path = nx.single_source_dijkstra_path(g, i, weight='length')[j]
 
