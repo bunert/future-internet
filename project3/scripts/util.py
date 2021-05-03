@@ -35,6 +35,8 @@ def read_sat_positions(sat_pos_file):
     for i in range(len(lines)):
         val = lines[i].split(",")
         sat_positions[int(val[0])] = {
+            "orbit_id": int(val[1]),
+            "sat_id_in_orbit": int(val[2]),
             "lat_deg": float(val[3]),
             "lat_rad": math.radians(float(val[3])),
             "long_deg": float(val[4]),

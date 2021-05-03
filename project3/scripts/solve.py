@@ -1,5 +1,9 @@
 import pandas as pd
-from util import *
+import networkx as nx
+try:
+    from . import util
+except (ImportError, SystemError):
+    import util
 from random import randrange
 
 
@@ -21,7 +25,7 @@ def read_satellites() -> pd.DataFrame:
 
 
 def read_isls() -> dict:
-    return read_valid_isls(
+    return util.read_valid_isls(
         '../input_data/valid_isls.txt',
     )
 
@@ -66,12 +70,14 @@ def dict_to_list(mapping: dict) -> list:
 
 
 def snake():
+    print("snake")
     results = [(x, x + 1) for x in range(1599)]
 
     write_mapping(results)
 
 
 def full_grid():
+    print("full grid")
     satellites = read_satellites()
     valid_isls = read_isls()
 
@@ -83,6 +89,7 @@ def full_grid():
 
         orbits[row['orbit_id']][row['satellite_orbit_id']] = row['satellite_id']
 
+    # print(orbits)
     mapping = {}
     for orbit_idx, orbit in orbits.items():
 
@@ -98,10 +105,93 @@ def full_grid():
 
     write_mapping(dict_to_list(mapping))
 
+def simple_grid():
+    print("simple grid")
+    sat_positions = util.read_sat_positions("../input_data/sat_positions.txt")
+    valid_isls = read_isls()
+
+    result = []
+    for idx, sat in sat_positions.items():
+        # add +1 and -1 of same orbit
+        if idx+1 in sat_positions and (idx, idx+1) in valid_isls:
+            result.append((idx, idx+1))
+        if idx-1 in sat_positions and (idx, idx-1) in valid_isls:
+            result.append((idx, idx-1))
+
+        # add same id of the orbit +1 and -1
+        for idx2, sat2 in sat_positions.items():
+            if sat["orbit_id"] == sat2["orbit_id"]+1 and sat["sat_id_in_orbit"] == sat2["sat_id_in_orbit"] and (idx, idx2) in valid_isls:
+                result.append((idx, idx2))
+            if sat["orbit_id"] == sat2["orbit_id"]-1 and sat["sat_id_in_orbit"] == sat2["sat_id_in_orbit"] and (idx, idx2) in valid_isls:
+                result.append((idx, idx2))
+                
+        
+    # print(sat_positions)
+    
+    result_set = set(map(tuple, map(sorted, result)))
+    # print(result_set)
+    write_mapping(result_set)
+
+def brute_force():
+    print("brute_force")
+
+    G = nx.Graph()
+
+    sat_pos_file = "../input_data/sat_positions.txt"
+    city_pos_file = "../input_data/cities.txt"
+    city_coverage_file = "../input_data/city_coverage.txt"
+    city_pair_file = "../input_data/city_pairs.txt"
+    valid_isls_file = "../input_data/valid_isls.txt"
+    sat_links_file = "../output_data/sat_links.txt"
+
+    top_file = "static_html/top.html"
+    bottom_file = "static_html/bottom.html"
+    html_file = "viz.html"
+
+    sat_positions = util.read_sat_positions(sat_pos_file)
+    city_positions = util.read_city_positions(city_pos_file)
+    city_coverage = util.read_coverage(city_coverage_file)
+    valid_isls = util.read_valid_isls(valid_isls_file)
+
+    for sat in sat_positions:
+        G.add_node(sat)
+    for city in city_positions:
+        G.add_node(city)
+    for city, sat in city_coverage:
+        G.add_edge(city, sat, length=city_coverage[city, sat])
+    for sat, sat2 in valid_isls:
+        G.add_edge(sat, sat2, length=valid_isls[sat, sat2])
+
+    result = []
+
+    for src in city_positions:
+        print(src)
+        for dest in city_positions:
+            if (src == dest):
+                continue
+            path = nx.shortest_path(G, source=src, target=dest, weight='length')
+            # print("shortest path (src: "+ str(src) + ", dest: " + str(dest) + ")")
+            # print(path)
+            if (path.__len__() <= 3):
+                # print("direct link with just one sattelite")
+                continue
+            else:
+                for j in range(1, path.__len__()-2):
+                    result.append((path[j], path[j+1]))
+            
+            # print(result)
+            # exit()
+
+    result_set = set(map(tuple, map(sorted, result)))
+    # print(result_set)
+    write_mapping(result_set)
+
 
 if __name__ == '__main__':
-    snake()
+    # snake()
     # full_grid()
+    # simple_grid()
+    brute_force()
 
     exec(open("check_score.py").read())  # who needs modules anyway
     exec(open("visualize.py").read())  # who needs modules anyway
