@@ -156,22 +156,41 @@ def brute_force():
     sat_positions = util.read_sat_positions(sat_pos_file)
     city_positions = util.read_city_positions(city_pos_file)
     city_coverage = util.read_coverage(city_coverage_file)
+    city_avg = sum(city_coverage.values())/len(city_coverage)
+    # print(city_avg)
     valid_isls = util.read_valid_isls(valid_isls_file)
-    city_pairs = util.read_city_pairs(city_pair_file)
+    isls_avg = sum(valid_isls.values())/len(valid_isls)
+    # print(isls_avg)
+    city_pairs = util.read_city_pairs_distinct(city_pair_file)
 
     for sat in sat_positions:
         G.add_node(sat)
     for city in city_positions:
         G.add_node(city)
     for city, sat in city_coverage:
-        G.add_edge(city, sat, length=city_coverage[city, sat])
+        G.add_edge(city, sat, length=city_coverage[city, sat]+city_avg)
     for sat, sat2 in valid_isls:
-        G.add_edge(sat, sat2, length=valid_isls[sat, sat2])
+        G.add_edge(sat, sat2, length=valid_isls[sat, sat2]+isls_avg)
 
     sat_counters = np.zeros(1600)
     result = []
+    
+    weighted_pairs = map(lambda x: (x[0], x[1], city_positions[x[0]]["gdp"]*city_positions[x[1]]["gdp"]), city_pairs)
+    # sort by weight (descending)
+    sorted_pairs = list(map(lambda x: (x[0], x[1]), list(sorted(weighted_pairs, key=lambda x: int(x[2]), reverse=True))))
 
-    for src, dest in pbar(city_pairs):
+    # city_pairs (read_city_pairs):         6.97
+    # city_pairs (read_city_pairs_distinct) 6.98
+    #   - use length=1 (min hops):          7.06
+    # sorted_pairs (desc, reverse=True):    6.99
+    #   - use length=1 (min hops):          7.01
+    #   - use length= _ * 1.2               6.99
+    #   - use length= _ * 2                 6.99
+    #   - use length= _ + avg               6.50
+    # sorted_pairs (asc, reverse=False):    7.20
+    #   - use length=1 (min hops):          7.24
+
+    for src, dest in pbar(sorted_pairs):
         # print("src: " + str(src) + " dest: " + str(dest))
         path = nx.shortest_path(G, source=src, target=dest, weight='length')
         # print("shortest path (src: "+ str(src) + ", dest: " + str(dest) + ")")
@@ -181,6 +200,7 @@ def brute_force():
             continue
         else:
             for j in range(1, path.__len__()-2):
+                # ignore up/down links
                 if (path[j] > 1599 or path[j+1] > 1599):
                     continue
                 u = path[j]

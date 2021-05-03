@@ -92,6 +92,19 @@ def read_city_pairs(city_pair_file):
         city_pairs[int(val[1]), int(val[0])] = float(val[2])
     return city_pairs
 
+def read_city_pairs_distinct(city_pair_file):
+    """
+    Read city pairs and corr. geodesic distances
+    :param city_pair_file: Input file name
+    :return: Dat ctructure holding city-pairs and corr.geodesic distances
+    """
+    city_pairs = {}
+    lines = [line.rstrip('\n') for line in open(city_pair_file)]
+    for i in range(len(lines)):
+        val = lines[i].split(",")
+        city_pairs[int(val[0]), int(val[1])] = float(val[2])
+    return city_pairs
+
 
 def read_valid_isls(valid_isl_file):
     """
