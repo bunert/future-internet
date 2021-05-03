@@ -155,7 +155,7 @@ def djikstra():
             cur_hop = path[0]
             for next_hop in path[1:]:
                 from_hop = min(cur_hop, next_hop)
-                to_hop = min(cur_hop, next_hop)
+                to_hop = max(cur_hop, next_hop)
 
                 if is_satellite(from_hop) and is_satellite(to_hop) and (from_hop, to_hop) not in connections:
                     connections[(from_hop, to_hop)] = True
