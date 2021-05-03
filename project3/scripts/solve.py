@@ -1,10 +1,15 @@
 import pandas as pd
 import networkx as nx
+import numpy as np
+
 try:
     from . import util
 except (ImportError, SystemError):
     import util
 from random import randrange
+
+from progressbar import ProgressBar
+pbar = ProgressBar()
 
 
 def read_satellites() -> pd.DataFrame:
@@ -152,6 +157,7 @@ def brute_force():
     city_positions = util.read_city_positions(city_pos_file)
     city_coverage = util.read_coverage(city_coverage_file)
     valid_isls = util.read_valid_isls(valid_isls_file)
+    city_pairs = util.read_city_pairs(city_pair_file)
 
     for sat in sat_positions:
         G.add_node(sat)
@@ -162,25 +168,58 @@ def brute_force():
     for sat, sat2 in valid_isls:
         G.add_edge(sat, sat2, length=valid_isls[sat, sat2])
 
+    sat_counters = np.zeros(1600)
     result = []
 
-    for src in city_positions:
-        print(src)
-        for dest in city_positions:
-            if (src == dest):
-                continue
-            path = nx.shortest_path(G, source=src, target=dest, weight='length')
-            # print("shortest path (src: "+ str(src) + ", dest: " + str(dest) + ")")
-            # print(path)
-            if (path.__len__() <= 3):
-                # print("direct link with just one sattelite")
-                continue
-            else:
-                for j in range(1, path.__len__()-2):
-                    result.append((path[j], path[j+1]))
-            
-            # print(result)
-            # exit()
+    for src, dest in pbar(city_pairs):
+        # print("src: " + str(src) + " dest: " + str(dest))
+        path = nx.shortest_path(G, source=src, target=dest, weight='length')
+        # print("shortest path (src: "+ str(src) + ", dest: " + str(dest) + ")")
+        # print(path)
+        if (path.__len__() <= 3):
+            # print("direct link with just one sattelite")
+            continue
+        else:
+            for j in range(1, path.__len__()-2):
+                if (path[j] > 1599 or path[j+1] > 1599):
+                    continue
+                u = path[j]
+                v = path[j+1]
+
+                if ((u,v) in result or (v,u) in result):
+                    # print("already inserted")
+                    continue
+                else:
+                    result.append((u, v))
+
+                    # print("add to result ("+ str(u) + ", " + str(v)+ ")")
+                    sat_counters[u] += 1
+                    sat_counters[v] += 1
+                    if (sat_counters[u] >= 3):
+                        iterator = G.neighbors(u)
+                        # print("iterator:")
+                        removable = []
+                        for i in iterator:
+                            # build list of connected nodes which are not cities and are not already added to result
+                            if (i > 1599 or (u,i) in result or (i,u) in result):
+                                # print("city or in result")
+                                continue
+                            removable.append((u, i))
+
+                        G.remove_edges_from(removable)
+                    if (sat_counters[v] >= 3):
+                        iterator = G.neighbors(v)
+                        # print("iterator:")
+                        removable = []
+                        for i in iterator:
+                            # build list of connected nodes which are not cities and are not already added to result
+                            if (i > 1599 or (v,i) in result or (i,v) in result):
+                                # print("city or in result")
+                                continue
+                            removable.append((v, i))
+
+                        G.remove_edges_from(removable)
+
 
     result_set = set(map(tuple, map(sorted, result)))
     # print(result_set)
