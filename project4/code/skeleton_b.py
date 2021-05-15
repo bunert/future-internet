@@ -104,12 +104,6 @@ def solve(in_graph_filename, in_demands_filename, in_paths_filename, out_rates_f
         '../myself/output/b/program.lp'
     )
 
-    # Retrieve the rates from the variable values
-    # print(type(var_val_map))
-    # for var in var_val_map:
-    #     print("{}: {}".format(var, var_val_map[var]))
-    #     # TODO: ...
-
     # Finally, write the rates to the output file
     with open(out_rates_filename, "w+") as rate_file:
         output = ["{:.6f}".format(var_val_map["p_{}".format(all_paths.index(path))]) if (var_val_map["p_{}".format(all_paths.index(path))] >0) else 0 for path in all_paths]
