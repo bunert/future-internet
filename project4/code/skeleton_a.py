@@ -37,6 +37,38 @@ import networkx as nx
 def is_in_path(edge, path):
     return edge in [(path[i],path[i+1]) for i in range(len(path)-1)]
 
+def step1(C, F, S, K):
+    c_f_list = [C[i]/F[i] if (F[i]>0) else float("inf") for i in K]
+    # find k in K minimizing C_j/F_j
+    min_value = min(c_f_list)
+    min_index = c_f_list.index(min_value)
+    # set S_k
+    S[min_index] = c_f_list[min_index]
+    # remove k from index list
+    K.pop(min_index)
+    return min_index
+
+def step2(C, F, S, all_flows, output, edges, min_index):
+    print("do step 2 with edge: {}".format(edges[min_index]))
+    # print("all_flows: {}".format(all_flows))
+    # print(len(all_flows))
+    removable = []
+    for i, flow in enumerate(all_flows):
+            # print(flow)
+            if (is_in_path(edges[min_index], flow)):
+                print(i)
+                print("flow {} inlcudes the edge (bw: {})".format(flow, S[min_index]))
+                output[i] = S[min_index]
+                removable.append(flow)
+                # print("all_flows: {}".format(all_flows))
+            
+    for elem in removable:
+        all_flows.remove(elem)
+    # print("all_flows afterwards: {}".format(all_flows))
+    S.pop(min_index)
+    edges.pop(min_index)
+    # print(edges)
+
 def solve(in_graph_filename, in_demands_filename, in_paths_filename, out_rates_filename):
 
     # Read in input
@@ -47,38 +79,56 @@ def solve(in_graph_filename, in_demands_filename, in_paths_filename, out_rates_f
     all_flows = wanteutility.get_all_flows(all_paths, demands)
 
     # Perform max-min fair allocation algorithm
-    print("graph:")
-    K = graph.number_of_edges()
-    print("number of edges: " + str(K))
+    # print("graph:")
+    K_size = graph.number_of_edges()
+    # print("number of edges: " + str(K))
 
-    F = [0.0] * K
+    F = [0.0] * K_size
+    C = [0.0] * K_size
+    S = [0.0] * K_size
+    K = [i for i in range(K_size)]
+
+    output = [0.0] * len(all_flows)
     
     # prepare f_j:
     # be the number of connections routed through link and not intersecting any (previously) congested links.
-    print(graph.edges)
+    edges = list(graph.edges)
+    # print(edges)
     for i, edge in enumerate(graph.edges):
-        print("{}: edge ({})".format(i, edge))
+        # print("{}: edge ({})".format(i, edge))
+        # print("weight: {}".format(graph.get_edge_data(edge[0], edge[1])["weight"]))
+        C[i] = graph.get_edge_data(edge[0], edge[1])["weight"]
         for path in all_flows:
-            print(path)
+            # print(path)
             if(is_in_path(edge, path)):
                 F[i]+=1
-        print("F[{}]: {}".format(i, F[i]))
+        # print("F[{}]: {}".format(i, F[i]))
+        # print("C[{}]: {}".format(i, C[i]))
 
+    # print("demands:")
+    # print(demands)
 
+    # print("all_paths:")
+    # print(all_paths)
 
-    print("demands:")
-    print(demands)
-
-    print("all_paths:")
-    print(all_paths)
-
-    print("paths_x_to_y:")
-    print(paths_x_to_y)
+    # print("paths_x_to_y:")
+    # print(paths_x_to_y)
 
     print("all_flows:")
     print(all_flows)
-    # TODO:
-    print("TODO")
+
+    # iterate until there exists some flow not yet removed
+    while(len(all_flows) > 0):
+        print("iteration:")
+        # step 1
+        min_index = step1(C, F, S, K)
+
+        # step 2
+        print("write bw {}".format(S[min_index]))
+        step2(C, F, S, all_flows, output, edges, min_index)
+        print("output: {}".format(output))
+        print("all_flows: {}".format(all_flows))
+
 
     # plotting:
     # options = {
@@ -93,13 +143,12 @@ def solve(in_graph_filename, in_demands_filename, in_paths_filename, out_rates_f
 
     # Finally, write the rates to the output file
     with open(out_rates_filename, "w+") as rate_file:
-        # TODO:
-        print("TODO")
-
+        # rate_file.write("\n".join(str(bw) for bw in output))
+        rate_file.write("\n".join("{:.6f}".format(bw) for bw in output))
 
 def main():
     for appendix in range(assignment_parameters.num_tests_a):
-        if (appendix == 0):
+        if appendix == 0:
             continue
         solve(
             "../ground_truth/input/a/graph%s.graph" % appendix,
