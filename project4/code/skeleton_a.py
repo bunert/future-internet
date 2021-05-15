@@ -31,34 +31,44 @@ except (ImportError, SystemError):
     import assignment_parameters
 
 
-import matplotlib.pyplot as plt
-import networkx as nx
-
 def is_in_path(edge, path):
     return edge in [(path[i],path[i+1]) for i in range(len(path)-1)]
 
 def step1(C, F, S, K):
     c_f_list = [C[i]/F[i] if (F[i]>0) else float("inf") for i in K]
+    # print(c_f_list)
     # find k in K minimizing C_j/F_j
     min_value = min(c_f_list)
+    # print("min_value: {}".format(min_value))
     min_index = c_f_list.index(min_value)
     # set S_k
     S[min_index] = c_f_list[min_index]
+    # print(S)
     # remove k from index list
     K.pop(min_index)
     return min_index
 
-def step2(C, F, S, all_flows, output, edges, min_index):
-    print("do step 2 with edge: {}".format(edges[min_index]))
+def step2(C, F, S, all_flows, output, edges, min_index, original_flows, original_edges):
+    # print("do step 2 with edge: {}".format(edges[min_index]))
     # print("all_flows: {}".format(all_flows))
     # print(len(all_flows))
     removable = []
     for i, flow in enumerate(all_flows):
             # print(flow)
             if (is_in_path(edges[min_index], flow)):
-                print(i)
-                print("flow {} inlcudes the edge (bw: {})".format(flow, S[min_index]))
-                output[i] = S[min_index]
+                # print("flow {} inlcudes the edge (bw: {})".format(flow, S[min_index]))
+                index = original_flows.index(flow)
+                # print(index)
+                # print("set index {} to value {}".format(index, S[min_index]))
+                # print(flow)
+                # update capacities
+                for i in range(len(flow)-1):
+                    # print("({},{})".format(flow[i], flow[i+1]))
+                    edge_index = original_edges.index((flow[i], flow[i+1]))
+                    C[edge_index] -= S[min_index]
+                    # print("edge_index {}".format(edge_index))
+                # C[min_index] -= S[min_index]
+                output[index] = S[min_index]
                 removable.append(flow)
                 # print("all_flows: {}".format(all_flows))
             
@@ -67,7 +77,6 @@ def step2(C, F, S, all_flows, output, edges, min_index):
     # print("all_flows afterwards: {}".format(all_flows))
     S.pop(min_index)
     edges.pop(min_index)
-    # print(edges)
 
 def solve(in_graph_filename, in_demands_filename, in_paths_filename, out_rates_filename):
 
@@ -78,21 +87,23 @@ def solve(in_graph_filename, in_demands_filename, in_paths_filename, out_rates_f
     paths_x_to_y = wanteutility.get_paths_x_to_y(all_paths, graph)
     all_flows = wanteutility.get_all_flows(all_paths, demands)
 
-    # Perform max-min fair allocation algorithm
-    # print("graph:")
-    K_size = graph.number_of_edges()
-    # print("number of edges: " + str(K))
+    original_flows = all_paths.copy()
 
+    # Perform max-min fair allocation algorithm
+    K_size = graph.number_of_edges()
+
+    # bookkeeping lists
     F = [0.0] * K_size
     C = [0.0] * K_size
     S = [0.0] * K_size
     K = [i for i in range(K_size)]
 
-    output = [0.0] * len(all_flows)
+    output = [0] * len(all_paths)
     
     # prepare f_j:
     # be the number of connections routed through link and not intersecting any (previously) congested links.
     edges = list(graph.edges)
+    original_edges = edges.copy()
     # print(edges)
     for i, edge in enumerate(graph.edges):
         # print("{}: edge ({})".format(i, edge))
@@ -105,58 +116,40 @@ def solve(in_graph_filename, in_demands_filename, in_paths_filename, out_rates_f
         # print("F[{}]: {}".format(i, F[i]))
         # print("C[{}]: {}".format(i, C[i]))
 
-    # print("demands:")
-    # print(demands)
-
-    # print("all_paths:")
-    # print(all_paths)
-
-    # print("paths_x_to_y:")
-    # print(paths_x_to_y)
-
-    print("all_flows:")
-    print(all_flows)
 
     # iterate until there exists some flow not yet removed
     while(len(all_flows) > 0):
-        print("iteration:")
         # step 1
         min_index = step1(C, F, S, K)
 
         # step 2
-        print("write bw {}".format(S[min_index]))
-        step2(C, F, S, all_flows, output, edges, min_index)
-        print("output: {}".format(output))
-        print("all_flows: {}".format(all_flows))
+        step2(C, F, S, all_flows, output, edges, min_index, original_flows, original_edges)
+
+        # recompute the number of connections routed through each link and not intersecting any (previously) congested links
+        F = [0.0] * K_size
+        for i, edge in enumerate(graph.edges):
+            # some flows are now removed from all_flows
+            for path in all_flows:
+                if(is_in_path(edge, path)):
+                    F[i]+=1
 
 
-    # plotting:
-    # options = {
-    #     'node_color': 'blue',
-    #     'node_size': 100,
-    #     'width': 3,
-    #     'arrowstyle': '-|>',
-    #     'arrowsize': 12,
-    # }
-    # nx.draw_networkx(graph, arrows=True, **options)
-    # plt.show()
 
     # Finally, write the rates to the output file
     with open(out_rates_filename, "w+") as rate_file:
         # rate_file.write("\n".join(str(bw) for bw in output))
-        rate_file.write("\n".join("{:.6f}".format(bw) for bw in output))
+        output = ["{:.6f}".format(bw) if (bw >0) else bw for bw in output]
+        rate_file.write("\n".join("{}".format(bw) for bw in output))
 
 def main():
     for appendix in range(assignment_parameters.num_tests_a):
-        if appendix == 0:
-            continue
+        print(appendix)
         solve(
             "../ground_truth/input/a/graph%s.graph" % appendix,
             "../ground_truth/input/a/demand%s.demand" % appendix,
             "../ground_truth/input/a/path%s.path" % appendix,
             "../myself/output/a/rate%s.rate" % appendix
         )
-        exit()
 
 
 if __name__ == "__main__":
