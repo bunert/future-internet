@@ -57,7 +57,7 @@ def solve(in_graph_filename, in_demands_filename, out_paths_filename, out_rates_
         path_combinations = list(permutations(range(graph.number_of_nodes()), 2))
 
         for source, target in path_combinations:
-            for path in k_shortest_paths(graph, source, target, 3):
+            for path in k_shortest_paths(graph, source, target, 10):
                 paths.append('-'.join(map(str,path)))
         
         path_file.write("\n".join(paths))
