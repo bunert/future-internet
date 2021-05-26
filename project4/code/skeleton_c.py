@@ -24,8 +24,9 @@ import wanteutility
 import assignment_parameters
 import networkx as nx
 from itertools import islice, permutations
-from multiprocessing.dummy import Pool as ThreadPool
+from multiprocessing import Pool
 import logging
+from skeleton_a import solve as minmax
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,7 +47,7 @@ def inverse_weight(source, target, attr):
 
 
 def k_shortest_paths(G, source, target, k):
-    return islice(nx.edge_disjoint_paths(G, source, target), k)
+    return list(islice(nx.edge_disjoint_paths(G, source, target), k))
 
 
 def is_in_path(edge, path):
@@ -67,7 +68,7 @@ def solve(log, n, in_graph_filename, in_demands_filename, out_paths_filename, ou
     paths = []
     with open(out_paths_filename, "w+") as path_file:
 
-        path_combinations = permutations(range(graph.number_of_nodes()), 2)
+        path_combinations = list(permutations(range(graph.number_of_nodes()), 2))
 
         for source, target in path_combinations:
             for path in k_shortest_paths(graph, source, target, 10):
@@ -78,12 +79,12 @@ def solve(log, n, in_graph_filename, in_demands_filename, out_paths_filename, ou
     # Read the paths from file
     all_paths = wanteutility.read_all_paths(out_paths_filename)
     paths_x_to_y = wanteutility.get_paths_x_to_y(all_paths, graph)
+    edges = list(graph.edges)
 
     # Apply max-min linear program from part B
     log.info("writing LP")
     path_lp = f"../myself/output/c/program_{n}.lp"
     with open(path_lp, "w+") as program_file:
-        log.info("write LP")
         lp = ["max: Z;"]
 
         for dem in demands:
@@ -94,7 +95,7 @@ def solve(log, n, in_graph_filename, in_demands_filename, out_paths_filename, ou
             constraint += " <= 0;"
             lp.append(constraint)
 
-        for edge in graph.edges:
+        for edge in edges:
             constraint = ""
             first = True
             for i, path in enumerate(all_paths):
@@ -141,11 +142,14 @@ def solve_wrapper(n):
 
 
 def main():
-    pool = ThreadPool()
+    pool = Pool()
     logging.info(f"Running with {pool._processes} processes")
     pool.map(solve_wrapper, range(assignment_parameters.num_tests_c))
     pool.close()
     pool.join()
+
+    # for n in range(assignment_parameters.num_tests_c):
+    #     solve_wrapper(n)
 
 
 if __name__ == "__main__":
