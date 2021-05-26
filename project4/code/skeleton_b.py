@@ -30,12 +30,14 @@ try:
 except (ImportError, SystemError):
     import assignment_parameters
 
+from multiprocessing.dummy import Pool
+
 
 def is_in_path(edge, path):
     return edge in [(path[i], path[i + 1]) for i in range(len(path) - 1)]
 
 
-def solve(in_graph_filename, in_demands_filename, in_paths_filename, out_rates_filename):
+def solve(n, in_graph_filename, in_demands_filename, in_paths_filename, out_rates_filename):
     # Read in input
     graph = wanteutility.read_graph(in_graph_filename)
     demands = wanteutility.read_demands(in_demands_filename)
@@ -43,7 +45,8 @@ def solve(in_graph_filename, in_demands_filename, in_paths_filename, out_rates_f
     paths_x_to_y = wanteutility.get_paths_x_to_y(all_paths, graph)
 
     # Write the linear program
-    with open("../myself/output/b/program.lp", "w+") as program_file:
+    lp_path = f"../myself/output/b/program_{n}.lp"
+    with open(lp_path, "w+") as program_file:
         lp = ["max: Z;"]
 
         for dem in demands:
@@ -76,27 +79,32 @@ def solve(in_graph_filename, in_demands_filename, in_paths_filename, out_rates_f
 
     # Solve the linear program
     var_val_map = wanteutility.ortools_solve_lp_and_get_var_val_map(
-        '../myself/output/b/program.lp'
+        lp_path
     )
 
     # Finally, write the rates to the output file
     with open(out_rates_filename, "w+") as rate_file:
         output = ["{:.6f}".format(var_val_map["p_{}".format(all_paths.index(path))]) if (
-                    var_val_map["p_{}".format(all_paths.index(path))] > 0) else 0 for path in all_paths]
+                var_val_map["p_{}".format(all_paths.index(path))] > 0) else 0 for path in all_paths]
         rate_file.write("\n".join("{}".format(bw) for bw in output))
 
 
+def solve_wrapper(appendix):
+    print(appendix)
+    solve(
+        appendix,
+        "../ground_truth/input/b/graph%s.graph" % appendix,
+        "../ground_truth/input/b/demand%s.demand" % appendix,
+        "../ground_truth/input/b/path%s.path" % appendix,
+        "../myself/output/b/rate%s.rate" % appendix
+    )
+
+
 def main():
-    for appendix in range(assignment_parameters.num_tests_b):
-        # if appendix != 1:
-        #     continue
-        print(appendix)
-        solve(
-            "../ground_truth/input/b/graph%s.graph" % appendix,
-            "../ground_truth/input/b/demand%s.demand" % appendix,
-            "../ground_truth/input/b/path%s.path" % appendix,
-            "../myself/output/b/rate%s.rate" % appendix
-        )
+    pool = Pool()
+    pool.map(solve_wrapper, range(assignment_parameters.num_tests_b))
+    pool.close()
+    pool.join()
 
 
 if __name__ == "__main__":

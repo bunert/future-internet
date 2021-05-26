@@ -32,6 +32,7 @@ except (ImportError, SystemError):
 
 import networkx as nx
 from itertools import islice, permutations
+from multiprocessing.dummy import Pool as ThreadPool
 
 
 def inverse_weight(source, target, attr):
@@ -46,7 +47,7 @@ def is_in_path(edge, path):
     return edge in [(path[i], path[i + 1]) for i in range(len(path) - 1)]
 
 
-def solve(in_graph_filename, in_demands_filename, out_paths_filename, out_rates_filename):
+def solve(n, in_graph_filename, in_demands_filename, out_paths_filename, out_rates_filename):
     # Read in input
     graph = wanteutility.read_graph(in_graph_filename)
     for source, target in graph.edges:
@@ -74,7 +75,8 @@ def solve(in_graph_filename, in_demands_filename, out_paths_filename, out_rates_
 
     # Apply max-min linear program from part B
     # Write the linear program
-    with open("../myself/output/c/program.lp", "w+") as program_file:
+    path_lp = f"../myself/output/c/program_{n}.lp"
+    with open(path_lp, "w+") as program_file:
         print("write LP")
         lp = ["max: Z;"]
 
@@ -109,7 +111,7 @@ def solve(in_graph_filename, in_demands_filename, out_paths_filename, out_rates_
     # Solve the linear program
     print("solve LP")
     var_val_map = wanteutility.ortools_solve_lp_and_get_var_val_map(
-        '../myself/output/c/program.lp'
+        path_lp
     )
 
     # Finally, write the rates to the output file
@@ -119,17 +121,28 @@ def solve(in_graph_filename, in_demands_filename, out_paths_filename, out_rates_
         rate_file.write("\n".join("{}".format(bw) for bw in output))
 
 
+def solve_wrapper(appendix):
+    print("test: {}".format(appendix))
+    solve(
+        appendix,
+        "../ground_truth/input/c/graph%d.graph" % appendix,
+        "../ground_truth/input/c/demand.demand",
+        "../myself/output/c/path%d.path" % appendix,
+        "../myself/output/c/rate%d.rate" % appendix
+    )
+
+
 def main():
-    for appendix in range(assignment_parameters.num_tests_c):
-        # if appendix != 0:
-        #     continue
-        print("test: {}".format(appendix))
-        solve(
-            "../ground_truth/input/c/graph%d.graph" % appendix,
-            "../ground_truth/input/c/demand.demand",
-            "../myself/output/c/path%d.path" % appendix,
-            "../myself/output/c/rate%d.rate" % appendix
-        )
+    pool = ThreadPool()
+    pool.map(solve_wrapper, range(assignment_parameters.num_tests_c))
+    pool.close()
+    pool.join()
+
+    # for appendix in range(assignment_parameters.num_tests_c):
+    #     solve_wrapper(appendix)
+
+# if appendix != 0:
+#     continue
 
 
 if __name__ == "__main__":
