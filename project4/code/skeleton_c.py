@@ -39,7 +39,7 @@ def inverse_weight(source, target, attr):
 
 
 def k_shortest_paths(G, source, target, k):
-    return islice(nx.shortest_simple_paths(G, source, target, weight=inverse_weight), k)
+    return islice(nx.edge_disjoint_paths(G, source, target), k)
 
 
 def is_in_path(edge, path):
