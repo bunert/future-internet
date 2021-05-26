@@ -20,19 +20,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-try:
-    from . import wanteutility
-except (ImportError, SystemError):
-    import wanteutility
-
-try:
-    from . import assignment_parameters
-except (ImportError, SystemError):
-    import assignment_parameters
-
+import wanteutility
+import assignment_parameters
 import networkx as nx
 from itertools import islice, permutations
 from multiprocessing.dummy import Pool as ThreadPool
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+
+
+class Log:
+    def __init__(self, n: int):
+        self.n = n
+
+    def info(self, msg):
+        logging.info(f"[{self.n:02d}] {msg}")
 
 
 def inverse_weight(source, target, attr):
@@ -47,7 +53,7 @@ def is_in_path(edge, path):
     return edge in [(path[i], path[i + 1]) for i in range(len(path) - 1)]
 
 
-def solve(n, in_graph_filename, in_demands_filename, out_paths_filename, out_rates_filename):
+def solve(log, n, in_graph_filename, in_demands_filename, out_paths_filename, out_rates_filename):
     # Read in input
     graph = wanteutility.read_graph(in_graph_filename)
     for source, target in graph.edges:
@@ -57,7 +63,7 @@ def solve(n, in_graph_filename, in_demands_filename, out_paths_filename, out_rat
     demands = wanteutility.read_demands(in_demands_filename)
 
     # Generate paths and write them to out_paths_filename
-    print("generate paths:")
+    log.info("generating paths")
     paths = []
     with open(out_paths_filename, "w+") as path_file:
 
@@ -74,10 +80,10 @@ def solve(n, in_graph_filename, in_demands_filename, out_paths_filename, out_rat
     paths_x_to_y = wanteutility.get_paths_x_to_y(all_paths, graph)
 
     # Apply max-min linear program from part B
-    # Write the linear program
+    log.info("writing LP")
     path_lp = f"../myself/output/c/program_{n}.lp"
     with open(path_lp, "w+") as program_file:
-        print("write LP")
+        log.info("write LP")
         lp = ["max: Z;"]
 
         for dem in demands:
@@ -109,7 +115,7 @@ def solve(n, in_graph_filename, in_demands_filename, out_paths_filename, out_rat
         program_file.write("\n".join(line for line in lp))
 
     # Solve the linear program
-    print("solve LP")
+    log.info("solving LP")
     var_val_map = wanteutility.ortools_solve_lp_and_get_var_val_map(
         path_lp
     )
@@ -121,14 +127,16 @@ def solve(n, in_graph_filename, in_demands_filename, out_paths_filename, out_rat
         rate_file.write("\n".join("{}".format(bw) for bw in output))
 
 
-def solve_wrapper(appendix):
-    print("test: {}".format(appendix))
+def solve_wrapper(n):
+    log = Log(n)
+    log.info(f"starting test")
     solve(
-        appendix,
-        "../ground_truth/input/c/graph%d.graph" % appendix,
+        log,
+        n,
+        "../ground_truth/input/c/graph%d.graph" % n,
         "../ground_truth/input/c/demand.demand",
-        "../myself/output/c/path%d.path" % appendix,
-        "../myself/output/c/rate%d.rate" % appendix
+        "../myself/output/c/path%d.path" % n,
+        "../myself/output/c/rate%d.rate" % n
     )
 
 
@@ -137,12 +145,6 @@ def main():
     pool.map(solve_wrapper, range(assignment_parameters.num_tests_c))
     pool.close()
     pool.join()
-
-    # for appendix in range(assignment_parameters.num_tests_c):
-    #     solve_wrapper(appendix)
-
-# if appendix != 0:
-#     continue
 
 
 if __name__ == "__main__":
