@@ -19,25 +19,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import time
 
-try:
-    from . import wanteutility
-except (ImportError, SystemError):
-    import wanteutility
-
-try:
-    from . import assignment_parameters
-except (ImportError, SystemError):
-    import assignment_parameters
-
-from multiprocessing.dummy import Pool
+import wanteutility
+import assignment_parameters
+from multiprocessing import Pool
+from logger import Log
+import logging
 
 
 def is_in_path(edge, path):
     return edge in [(path[i], path[i + 1]) for i in range(len(path) - 1)]
 
 
-def solve(n, in_graph_filename, in_demands_filename, in_paths_filename, out_rates_filename):
+def solve_lp(n, log: Log, in_graph_filename, in_demands_filename, in_paths_filename, out_rates_filename):
     # Read in input
     graph = wanteutility.read_graph(in_graph_filename)
     demands = wanteutility.read_demands(in_demands_filename)
@@ -45,66 +40,67 @@ def solve(n, in_graph_filename, in_demands_filename, in_paths_filename, out_rate
     paths_x_to_y = wanteutility.get_paths_x_to_y(all_paths, graph)
 
     # Write the linear program
+    log.info("write LP")
     lp_path = f"../myself/output/b/program_{n}.lp"
     with open(lp_path, "w+") as program_file:
         lp = ["max: Z;"]
 
         for dem in demands:
-            constraint = "Z"
+            variables = ["Z"]
             for path in paths_x_to_y[dem[0]][dem[1]]:
-                constraint += " - p_{}".format(all_paths.index(path))
+                variables.append(f"p_{all_paths.index(path)}")
 
-            constraint += " <= 0;"
-            lp.append(constraint)
+            lp.append(f"{' - '.join(variables)} <= 0;")
 
         for edge in graph.edges:
-            constraint = ""
-            first = True
+            variables = []
+
             for i, path in enumerate(all_paths):
                 if is_in_path(edge, path):
-                    if not first:
-                        constraint += " + "
-                    constraint += "p_{}".format(all_paths.index(path))
-                    first = False
-            if not first:
-                constraint += " <= {};".format(graph.get_edge_data(edge[0], edge[1])["weight"])
-                lp.append(constraint)
+                    variables.append(f"p_{all_paths.index(path)}")
+
+            if len(variables) > 0:
+                lp.append(f"{' + '.join(variables)} <= {graph.get_edge_data(edge[0], edge[1])['weight']};")
 
         for path in all_paths:
-            constraint = "p_{} >= 0;".format(all_paths.index(path))
-            lp.append(constraint)
+            lp.append(f"p_{all_paths.index(path)} >= 0;")
 
         # write constraints to file
-        program_file.write("\n".join(line for line in lp))
+        program_file.write("\n".join(lp))
 
     # Solve the linear program
-    var_val_map = wanteutility.ortools_solve_lp_and_get_var_val_map(
-        lp_path
-    )
+    log.info("solve LP")
+    var_val_map = wanteutility.ortools_solve_lp_and_get_var_val_map(lp_path)
 
     # Finally, write the rates to the output file
     with open(out_rates_filename, "w+") as rate_file:
-        output = ["{:.6f}".format(var_val_map["p_{}".format(all_paths.index(path))]) if (
-                var_val_map["p_{}".format(all_paths.index(path))] > 0) else 0 for path in all_paths]
-        rate_file.write("\n".join("{}".format(bw) for bw in output))
+        output = ["{:.6f}".format(var_val_map[f"p_{all_paths.index(path)}"]) if (
+                var_val_map[f"p_{all_paths.index(path)}"] > 0) else 0 for path in all_paths]
+        rate_file.write("\n".join(f"{bw}" for bw in output))
+
+    log.info("finished LP")
 
 
-def solve_wrapper(appendix):
-    print(appendix)
-    solve(
-        appendix,
-        "../ground_truth/input/b/graph%s.graph" % appendix,
-        "../ground_truth/input/b/demand%s.demand" % appendix,
-        "../ground_truth/input/b/path%s.path" % appendix,
-        "../myself/output/b/rate%s.rate" % appendix
+def solve_wrapper(n):
+    solve_lp(
+        n,
+        Log(n),
+        "../ground_truth/input/b/graph%s.graph" % n,
+        "../ground_truth/input/b/demand%s.demand" % n,
+        "../ground_truth/input/b/path%s.path" % n,
+        "../myself/output/b/rate%s.rate" % n
     )
 
 
 def main():
+    start = time.time()
     pool = Pool()
+    logging.info(f"Running part b with {pool._processes} processes")
     pool.map(solve_wrapper, range(assignment_parameters.num_tests_b))
     pool.close()
     pool.join()
+
+    logging.info(f"Finished part b in {(time.time() - start):.02f} seconds")
 
 
 if __name__ == "__main__":

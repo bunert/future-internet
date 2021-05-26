@@ -19,27 +19,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import time
 
 import wanteutility
-import assignment_parameters
 import networkx as nx
 from itertools import islice, permutations
 from multiprocessing import Pool
 import logging
-from skeleton_a import solve as minmax
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
-
-
-class Log:
-    def __init__(self, n: int):
-        self.n = n
-
-    def info(self, msg):
-        logging.info(f"[{self.n:02d}] {msg}")
+from logger import Log
+from skeleton_b import solve_lp
+import assignment_parameters
 
 
 def inverse_weight(source, target, attr):
@@ -47,7 +36,7 @@ def inverse_weight(source, target, attr):
 
 
 def k_shortest_paths(G, source, target, k):
-    return list(islice(nx.edge_disjoint_paths(G, source, target), k))
+    return islice(nx.shortest_simple_paths(G, source, target), k)
 
 
 def is_in_path(edge, path):
@@ -61,14 +50,12 @@ def solve(log, n, in_graph_filename, in_demands_filename, out_paths_filename, ou
         attr = graph.get_edge_data(source, target)
         attr['cap'] = attr['weight']
 
-    demands = wanteutility.read_demands(in_demands_filename)
-
     # Generate paths and write them to out_paths_filename
     log.info("generating paths")
     paths = []
     with open(out_paths_filename, "w+") as path_file:
 
-        path_combinations = list(permutations(range(graph.number_of_nodes()), 2))
+        path_combinations = permutations(range(graph.number_of_nodes()), 2)
 
         for source, target in path_combinations:
             for path in k_shortest_paths(graph, source, target, 10):
@@ -76,56 +63,7 @@ def solve(log, n, in_graph_filename, in_demands_filename, out_paths_filename, ou
 
         path_file.write("\n".join(paths))
 
-    # Read the paths from file
-    all_paths = wanteutility.read_all_paths(out_paths_filename)
-    paths_x_to_y = wanteutility.get_paths_x_to_y(all_paths, graph)
-    edges = list(graph.edges)
-
-    # Apply max-min linear program from part B
-    log.info("writing LP")
-    path_lp = f"../myself/output/c/program_{n}.lp"
-    with open(path_lp, "w+") as program_file:
-        lp = ["max: Z;"]
-
-        for dem in demands:
-            constraint = "Z"
-            for path in paths_x_to_y[dem[0]][dem[1]]:
-                constraint += " - p_{}".format(all_paths.index(path))
-
-            constraint += " <= 0;"
-            lp.append(constraint)
-
-        for edge in edges:
-            constraint = ""
-            first = True
-            for i, path in enumerate(all_paths):
-                if is_in_path(edge, path):
-                    if not first:
-                        constraint += " + "
-                    constraint += "p_{}".format(all_paths.index(path))
-                    first = False
-            if not first:
-                constraint += " <= {};".format(graph.get_edge_data(edge[0], edge[1])["weight"])
-                lp.append(constraint)
-
-        for path in all_paths:
-            constraint = "p_{} >= 0;".format(all_paths.index(path))
-            lp.append(constraint)
-
-        # write constraints to file
-        program_file.write("\n".join(line for line in lp))
-
-    # Solve the linear program
-    log.info("solving LP")
-    var_val_map = wanteutility.ortools_solve_lp_and_get_var_val_map(
-        path_lp
-    )
-
-    # Finally, write the rates to the output file
-    with open(out_rates_filename, "w+") as rate_file:
-        output = ["{:.6f}".format(var_val_map["p_{}".format(all_paths.index(path))]) if (
-                var_val_map["p_{}".format(all_paths.index(path))] > 0) else 0 for path in all_paths]
-        rate_file.write("\n".join("{}".format(bw) for bw in output))
+    solve_lp(n, log, in_graph_filename, in_demands_filename, out_paths_filename, out_rates_filename)
 
 
 def solve_wrapper(n):
@@ -142,14 +80,14 @@ def solve_wrapper(n):
 
 
 def main():
+    start = time.time()
     pool = Pool()
-    logging.info(f"Running with {pool._processes} processes")
+    logging.info(f"Running part c with {pool._processes} processes")
     pool.map(solve_wrapper, range(assignment_parameters.num_tests_c))
     pool.close()
     pool.join()
 
-    # for n in range(assignment_parameters.num_tests_c):
-    #     solve_wrapper(n)
+    logging.info(f"Finished part c in {(time.time() - start):.02f} seconds")
 
 
 if __name__ == "__main__":
