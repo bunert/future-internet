@@ -34,8 +34,12 @@ import networkx as nx
 from itertools import islice, permutations
 
 
-def k_shortest_paths(G, source, target, k, weight=None):
-    return islice(nx.shortest_simple_paths(G, source, target, weight=weight), k)
+def inverse_weight(source, target, attr):
+    return attr['cap'] * -1
+
+
+def k_shortest_paths(G, source, target, k):
+    return islice(nx.shortest_simple_paths(G, source, target, weight=inverse_weight), k)
 
 
 def is_in_path(edge, path):
@@ -45,6 +49,10 @@ def is_in_path(edge, path):
 def solve(in_graph_filename, in_demands_filename, out_paths_filename, out_rates_filename):
     # Read in input
     graph = wanteutility.read_graph(in_graph_filename)
+    for source, target in graph.edges:
+        attr = graph.get_edge_data(source, target)
+        attr['cap'] = attr['weight']
+
     demands = wanteutility.read_demands(in_demands_filename)
 
     # Generate paths and write them to out_paths_filename
