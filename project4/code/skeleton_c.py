@@ -142,6 +142,7 @@ def solve_wrapper(n):
 
 def main():
     pool = ThreadPool()
+    logging.info(f"Running with {pool._processes} processes")
     pool.map(solve_wrapper, range(assignment_parameters.num_tests_c))
     pool.close()
     pool.join()
