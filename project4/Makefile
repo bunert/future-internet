@@ -11,3 +11,16 @@ build:
 publish: build
 	docker tag $(REPOSITORY) $(REGISTRY)/$(REPOSITORY):$(VERSION)
 	docker push $(REGISTRY)/$(REPOSITORY):$(VERSION)
+
+run:
+	gcloud compute instances create-with-container \
+  		--container-image ghcr.io/elwin/wan:latest \
+  		--container-mount-host-path host-path=/home/elwin/c,mount-path=/project4/myself/output/c \
+  		--machine-type e2-standard-16 \
+  		elwin
+
+destroy:
+	gcloud compute instances delete elwin --quiet
+
+copy:
+	./copy.sh

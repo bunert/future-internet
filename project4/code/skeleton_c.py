@@ -36,7 +36,7 @@ def inverse_weight(source, target, attr):
 
 
 def k_shortest_paths(G, source, target, k):
-    return islice(nx.shortest_simple_paths(G, source, target), k)
+    return islice(nx.edge_disjoint_paths(G, source, target), k)
 
 
 def is_in_path(edge, path):
@@ -53,14 +53,14 @@ def solve(log, n, in_graph_filename, in_demands_filename, out_paths_filename, ou
     # Generate paths and write them to out_paths_filename
     log.info("generating paths")
     paths = []
+
+    path_combinations = permutations(range(graph.number_of_nodes()), 2)
+
+    for source, target in path_combinations:
+        for path in k_shortest_paths(graph, source, target, 10):
+            paths.append('-'.join(map(str, path)))
+
     with open(out_paths_filename, "w+") as path_file:
-
-        path_combinations = permutations(range(graph.number_of_nodes()), 2)
-
-        for source, target in path_combinations:
-            for path in k_shortest_paths(graph, source, target, 10):
-                paths.append('-'.join(map(str, path)))
-
         path_file.write("\n".join(paths))
 
     solve_lp(n, log, in_graph_filename, in_demands_filename, out_paths_filename, out_rates_filename)
