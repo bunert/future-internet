@@ -36,7 +36,7 @@ def inverse_weight(source, target, attr):
 
 
 def k_shortest_paths(G, source, target, k):
-    return islice(nx.edge_disjoint_paths(G, source, target), k)
+    return islice(nx.node_disjoint_paths(G, source, target), k)
 
 
 def is_in_path(edge, path):
@@ -81,11 +81,13 @@ def solve_wrapper(n):
 
 def main():
     start = time.time()
-    pool = Pool()
-    logging.info(f"Running part c with {pool._processes} processes")
-    pool.map(solve_wrapper, range(assignment_parameters.num_tests_c))
-    pool.close()
-    pool.join()
+
+    # with Pool() as pool:
+    #     logging.info(f"Running part c with {pool._processes} processes")
+    #     pool.map(solve_wrapper, range(assignment_parameters.num_tests_c))
+
+    for n in range(assignment_parameters.num_tests_c):
+        solve_wrapper(n)
 
     logging.info(f"Finished part c in {(time.time() - start):.02f} seconds")
 

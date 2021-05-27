@@ -28,44 +28,40 @@ from logger import Log
 import logging
 
 
-def is_in_path(edge, path):
-    return edge in [(path[i], path[i + 1]) for i in range(len(path) - 1)]
-
-
 def solve_lp(n, log: Log, in_graph_filename, in_demands_filename, in_paths_filename, out_rates_filename):
     # Read in input
     graph = wanteutility.read_graph(in_graph_filename)
-    demands = wanteutility.read_demands(in_demands_filename)
     all_paths = wanteutility.read_all_paths(in_paths_filename)
+    demands = wanteutility.read_demands(in_demands_filename)
     paths_x_to_y = wanteutility.get_paths_x_to_y(all_paths, graph)
 
     # Write the linear program
     log.info("write LP")
     lp_path = f"../myself/output/b/program_{n}.lp"
+    lp = ["max: Z;"]
+
+    for dem in demands:
+        variables = ["Z"]
+        for path in paths_x_to_y[dem[0]][dem[1]]:
+            variables.append(f"p_{all_paths.index(path)}")
+
+        lp.append(f"{' - '.join(variables)} <= 0;")
+
+    edge_to_paths = {}  # edge -> [paths]
+    for i, path in enumerate(all_paths):
+        cur_node = path[0]
+        for next_node in path[1:]:
+            edge_to_paths.setdefault((cur_node, next_node), []).append(i)
+            cur_node = next_node
+
+    for edge, paths in edge_to_paths.items():
+        lp.append(
+            f"{' + '.join(map(lambda x: 'p_' + str(x), paths))} <= {graph.get_edge_data(edge[0], edge[1])['weight']};")
+
+    for i, path in enumerate(all_paths):
+        lp.append(f"p_{i} >= 0;")
+
     with open(lp_path, "w+") as program_file:
-        lp = ["max: Z;"]
-
-        for dem in demands:
-            variables = ["Z"]
-            for path in paths_x_to_y[dem[0]][dem[1]]:
-                variables.append(f"p_{all_paths.index(path)}")
-
-            lp.append(f"{' - '.join(variables)} <= 0;")
-
-        for edge in graph.edges:
-            variables = []
-
-            for i, path in enumerate(all_paths):
-                if is_in_path(edge, path):
-                    variables.append(f"p_{all_paths.index(path)}")
-
-            if len(variables) > 0:
-                lp.append(f"{' + '.join(variables)} <= {graph.get_edge_data(edge[0], edge[1])['weight']};")
-
-        for path in all_paths:
-            lp.append(f"p_{all_paths.index(path)} >= 0;")
-
-        # write constraints to file
         program_file.write("\n".join(lp))
 
     # Solve the linear program
@@ -94,15 +90,14 @@ def solve_wrapper(n):
 
 def main():
     start = time.time()
-    # pool = Pool()
-    # logging.info(f"Running part b with {pool._processes} processes")
-    # pool.map(solve_wrapper, range(assignment_parameters.num_tests_b))
-    # pool.close()
-    # pool.join()
-    #
 
-    for n in range(10):
+    # with Pool() as pool:
+    #     logging.info(f"Running part b with {pool._processes} processes")
+    #     pool.map(solve_wrapper, range(assignment_parameters.num_tests_b))
+
+    for n in range(assignment_parameters.num_tests_b):
         solve_wrapper(n)
+
     logging.info(f"Finished part b in {(time.time() - start):.02f} seconds")
 
 
