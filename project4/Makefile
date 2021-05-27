@@ -23,4 +23,4 @@ destroy:
 	gcloud compute instances delete elwin --quiet
 
 copy:
-	./copy.sh
+	gcloud compute scp --recurse elwin:/home/elwin/c myself/output

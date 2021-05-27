@@ -91,12 +91,9 @@ def solve_wrapper(n):
 def main():
     start = time.time()
 
-    # with Pool() as pool:
-    #     logging.info(f"Running part b with {pool._processes} processes")
-    #     pool.map(solve_wrapper, range(assignment_parameters.num_tests_b))
-
-    for n in range(assignment_parameters.num_tests_b):
-        solve_wrapper(n)
+    with Pool() as pool:
+        logging.info(f"Running part b with {pool._processes} processes")
+        pool.map(solve_wrapper, range(assignment_parameters.num_tests_b))
 
     logging.info(f"Finished part b in {(time.time() - start):.02f} seconds")
 
